@@ -11,11 +11,11 @@ class Assistant:
         self.food_stall = ''
         self.init_google_recognizer() 
     def init_google_recognizer(self):
-        with sr.Microphone() as source:
+        with sr.Microphone(device_index=2) as source:
             self.recognizer = sr.Recognizer()
             self.recognizer.adjust_for_ambient_noise(source, duration=3)
     def listen_speech(self, timeout=3, phrase_time_limit=5):
-        with sr.Microphone() as source:
+        with sr.Microphone(device_index=2) as source:
             self.audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
     def recognize_audio(self):
         try:
@@ -59,8 +59,10 @@ class Assistant:
         print(message)
         line_send_to(message=message)
         
-    def _semantic_analysis(self, sentence, phrases):
+    def _semantic_analysis(self, query, phrases):
         best_distance = 1e9
+        if not query:
+            return 1e9
         for phrase in phrases:
             best_distance = min(best_distance, editdistance.eval(query, phrase) / len(query))
         return best_distance
