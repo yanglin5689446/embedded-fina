@@ -13,7 +13,7 @@ class Assistant:
     def init_google_recognizer(self):
         with sr.Microphone(device_index=2) as source:
             self.recognizer = sr.Recognizer()
-            self.recognizer.adjust_for_ambient_noise(source, duration=3)
+            self.recognizer.adjust_for_ambient_noise(source)
     def listen_speech(self, timeout=3, phrase_time_limit=5):
         with sr.Microphone(device_index=2) as source:
             self.audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
@@ -27,16 +27,16 @@ class Assistant:
     def listen_and_recognize(self):
         self.listen_speech()
         return self.recognize_audio()
-    def speak(self, message):
+    def say(self, message):
+        print(message)
         speech = Speech(message, self.lang)
         speech.play(("speed", "1"))
-        print(message)
     def search_food_stall(self, query):
         best_distance = 1e9
         best_match = None
         for name, food_stall in food_stalls.items():
             for keyword in food_stall['keywords']:
-                distance = editdistance.eval(query, keyword) / len(query)
+                distance = editdistance.eval(query, keyword) / max(len(query), len(keyword))
                 if distance < best_distance:
                     best_match = name 
                     best_distance = distance
@@ -45,15 +45,18 @@ class Assistant:
         best_distance = 1e9
         best_match = None
         for item in food_stalls[self.food_stall]['menu'].keys():
-            distance = editdistance.eval(query, item) / len(query)
+            distance = editdistance.eval(query, item) / max(len(query), len(item))
             if distance < best_distance:
                 best_match = item 
                 best_distance = distance
         return (best_match, best_distance)
     def confirm(self):
-        positive_replies = ('是', '是的', '對', '對的', '正確', '沒錯', 'OK')     
+        positive_replies = ('是', '是的', '對', '對的', '正確', '沒錯', 'OK')
         user_reply = self.listen_and_recognize()
         return self._semantic_analysis(user_reply, positive_replies) < 0.5
+    def check_order_finish(self, query):
+        return query == '就這樣'
+
     def send_orders(self, orders):
         message = self._assemble_message(orders)
         print(message)
@@ -64,7 +67,7 @@ class Assistant:
         if not query:
             return 1e9
         for phrase in phrases:
-            best_distance = min(best_distance, editdistance.eval(query, phrase) / len(query))
+            best_distance = min(best_distance, editdistance.eval(query, phrase) / max(len(query), len(phrase)))
         return best_distance
 
     def _assemble_message(self, orders):

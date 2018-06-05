@@ -8,17 +8,16 @@ def order(assistant):
     first_order = True 
     orders = {}
     while(True):
-        print("請點餐：") if first_order else print("請繼續點餐：") 
+        assistant.say("請點餐：") if first_order else assistant.say("請繼續點餐：") 
         first_order = False 
         result = None
         while not result:
             result = assistant.listen_and_recognize() 
 
-        if result == u"就這樣":
+        if assistant.check_order_finish(result):
             break
         else:
             words = list(jieba.cut(result))
-            print(''.join(words))
             amount = parse_number(words[0]);
             if amount:
                 result = ''.join(words[1:])  
@@ -26,19 +25,22 @@ def order(assistant):
                 amount = 1
             (match, edit_distance) = assistant.search_menu(result)
             if(edit_distance > 0.5):
-                print("請問您所說的是 {0} {1}份 嗎？".format(match, amount))
+                assistant.say("請問您所說的是 {0} {1}份 嗎？".format(match, amount))
                 answer = assistant.confirm()
                 if answer:
-                    print('{}份 {}'.format(amount, match))
+                    assistant.say('{}份 {}，收到'.format(amount, match))
                     if match in orders:
                         orders[match] += amount
                     else:
                         orders[match] = amount
                 else:
-                    print("好的，讓我們再試一次")
+                    assistant.say("好的，請再試一次")
                     continue
+            elif edit_distance >= 1.0:
+                assistant.say("抱歉，我不了解您說的品項")
+                continue
             else:
-                print('{}份 {}'.format(amount, match))
+                assistant.say('{}份 {}，收到'.format(amount, match))
 
                 if match in orders:
                     orders[match] += amount
@@ -46,11 +48,11 @@ def order(assistant):
                     orders[match] = amount
     return orders
 
-def sum_orders(menu, orders):
-    print("您的訂單：")
+def sum_orders(assistant, menu, orders):
+    assistant.say("您的訂單：")
     total_price = 0
     for item, amount in orders.items():
-        print("{0} {1} 份".format(item, amount))
+        assistant.say("{0} {1} 份".format(item, amount))
         total_price += menu[item] * amount 
     return total_price
 
@@ -69,26 +71,25 @@ if __name__ == '__main__':
     print("done.")
     
     while True:
-        print("想訂哪一家外送?")
-        assistant.listen_speech()
+        assistant.say("想訂哪一家外送?")
         result = None
         while not result:
             result = assistant.listen_and_recognize() 
         (match, edit_distance) = assistant.search_food_stall(result)
         if(edit_distance > 0.5):
-            print("請問您所說的是 {0} 嗎？".format(match))
+            assistant.say("請問您所說的是 {0} 嗎？".format(match))
             answer = assistant.confirm()
             
             if answer:
                 assistant.food_stall = match
-                print("設定店家: {0}".format(match))
+                assistant.say("設定店家: {0}".format(match))
                 break
             else:
-                print("好的，讓我們再試一次")
+                assistant.say("好的，請再試一次")
                 continue
         else:
             assistant.food_stall = match
-            print("設定店家: {0}".format(match))
+            assistant.say("設定店家: {0}".format(match))
             break
     total_price = 0
     minimum_charge = food_stalls[assistant.food_stall]['minimum_charge']
@@ -102,20 +103,20 @@ if __name__ == '__main__':
             else:
                 orders[item] = amount
 
-        total_price = sum_orders(food_stalls[assistant.food_stall]['menu'], orders)
-        print('總金額為{0}'.format(total_price))
+        total_price = sum_orders(assistant, food_stalls[assistant.food_stall]['menu'], orders)
+        assistant.say('總金額為{0}'.format(total_price))
 
         if total_price < minimum_charge:
-            print('還需要 {0} 元才可外送，要再點些什麼嗎？'.format(minimum_charge - total_price))
+            assistant.say('還需要 {0} 元才可外送，要再點些什麼嗎？'.format(minimum_charge - total_price))
             answer = assistant.confirm()
             
             if answer:
-                print("重新點單")
+                assistant.say("重新點單")
                 continue
             else:
-                print("訂單取消")
+                assistant.say("訂單取消")
                 exit(0)
-    print('為您將訂單送到 {}'.format(assistant.food_stall))
+    assistant.say('為您將訂單送到 {}'.format(assistant.food_stall))
     assistant.send_orders(orders)
 
 
