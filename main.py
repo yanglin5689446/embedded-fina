@@ -17,6 +17,7 @@ def order(assistant):
         if assistant.check_order_finish(result):
             break
         else:
+            print(result)
             words = list(jieba.cut(result))
             amount = parse_number(words[0]);
             if amount:
@@ -104,10 +105,10 @@ if __name__ == '__main__':
                 orders[item] = amount
 
         total_price = sum_orders(assistant, food_stalls[assistant.food_stall]['menu'], orders)
-        assistant.say('總金額為{0}'.format(total_price))
+        assistant.say('總金額為{0}元'.format(total_price))
 
         if total_price < minimum_charge:
-            assistant.say('還需要 {0} 元才可外送，要再點些什麼嗎？'.format(minimum_charge - total_price))
+            assistant.say('還需要 {0} 元才可以外送，要再點些什麼嗎？'.format(minimum_charge - total_price))
             answer = assistant.confirm()
             
             if answer:

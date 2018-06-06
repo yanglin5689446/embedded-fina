@@ -8,5 +8,5 @@ from constants import (LINE_CHANNEL_TOKEN, LINE_CHANNEL_SECRET, LINE_USER_ID)
 line_bot_api = LineBotApi(LINE_CHANNEL_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 
-def line_send_to(id = LINE_USER_ID, message = '' ):
+def line_send_to(id = LINE_USER_ID, message = ''):
     line_bot_api.push_message(id, TextSendMessage(text=message))
