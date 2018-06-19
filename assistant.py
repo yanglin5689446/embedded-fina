@@ -11,12 +11,11 @@ class Assistant:
         self.food_stall = ''
         self.init_google_recognizer() 
     def init_google_recognizer(self):
-        print(sr.Microphone.list_microphone_names())
-        with sr.Microphone(device_index=2, sample_rate=44100) as source:
+        with sr.Microphone(sample_rate=44100) as source:
             self.recognizer = sr.Recognizer()
             self.recognizer.adjust_for_ambient_noise(source)
     def listen_speech(self, timeout=3, phrase_time_limit=5):
-        with sr.Microphone(device_index=2, sample_rate=44100) as source:
+        with sr.Microphone(sample_rate=44100) as source:
             self.audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
     def recognize_audio(self):
         try:
@@ -54,6 +53,13 @@ class Assistant:
                 best_match = item 
                 best_distance = distance
         return (best_match, best_distance)
+    
+    def check_cancel(self, message):
+        possible_replies = ['取消']
+        result = self._semantic_analysis(message, possible_replies)
+        print(result)
+        return result <= 0.5
+
     def confirm(self):
         positive_replies = ('是', '是的', '對', '對的', '正確', '沒錯', 'OK', '好')
         negative_replies = ('否', '不是', '錯', '不對', '錯誤', 'NO', '不要')

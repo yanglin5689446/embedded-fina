@@ -3,10 +3,12 @@ from assistant import Assistant
 import jieba
 from food_stalls import food_stalls
 from utilities import parse_number
+from time import time
 
 def order(assistant):
     first_order = True 
     orders = {}
+    orders_stack = []
     while(True):
         assistant.say("請點餐：") if first_order else assistant.say("請繼續點餐：") 
         first_order = False 
@@ -16,37 +18,46 @@ def order(assistant):
 
         if assistant.check_order_finish(result):
             break
+        
+        if assistant.check_cancel(result):
+            assistant.say("取消上一次訂單")
+            if len(orders_stack):
+                last_order = orders_stack.pop()
+                orders[last_order['name']] -= last_order['amount']
+            continue
+        
+        print(result)
+        words = list(jieba.cut(result))
+        amount = parse_number(words[0]);
+        if amount:
+            result = ''.join(words[1:])  
         else:
-            print(result)
-            words = list(jieba.cut(result))
-            amount = parse_number(words[0]);
-            if amount:
-                result = ''.join(words[1:])  
-            else:
-                amount = 1
-            (match, edit_distance) = assistant.search_menu(result)
-            if(edit_distance > 0.5):
-                assistant.say("請問您所說的是 {0} {1}份 嗎？".format(match, amount))
-                answer = assistant.confirm()
-                if answer:
-                    assistant.say('{}份 {}，收到'.format(amount, match))
-                    if match in orders:
-                        orders[match] += amount
-                    else:
-                        orders[match] = amount
-                else:
-                    assistant.say("好的，請再試一次")
-                    continue
-            elif edit_distance >= 1.0:
-                assistant.say("抱歉，我不了解您說的品項")
-                continue
-            else:
+            amount = 1
+        (match, edit_distance) = assistant.search_menu(result)
+        if(edit_distance > 0.5):
+            assistant.say("請問您所說的是 {0} {1}份 嗎？".format(match, amount))
+            answer = assistant.confirm()
+            if answer:
                 assistant.say('{}份 {}，收到'.format(amount, match))
-
+                orders_stack.append({ 'name': match, 'amount': amount})
                 if match in orders:
                     orders[match] += amount
                 else:
                     orders[match] = amount
+            else:
+                assistant.say("好的，請再試一次")
+                continue
+        elif edit_distance >= 1.0:
+            assistant.say("抱歉，我不了解您說的品項")
+            continue
+        else:
+            assistant.say('{}份 {}，收到'.format(amount, match))
+            orders_stack.append({ 'name': match, 'amount': amount})
+
+            if match in orders:
+                orders[match] += amount
+            else:
+                orders[match] = amount
     return orders
 
 def sum_orders(assistant, menu, orders):
@@ -117,8 +128,18 @@ if __name__ == '__main__':
             else:
                 assistant.say("訂單取消")
                 exit(0)
-    assistant.say('為您將訂單送到 {}'.format(assistant.food_stall))
-    assistant.send_orders(orders)
+    assistant.say('是否要為您將訂單送到 {}？'.format(assistant.food_stall))
+    answer = assistant.confirm()
+    if answer:
+        assistant.say('為您將訂單送到 {}'.format(assistant.food_stall))
+    else:
+        file_name = "order-{}.txt".format(time())
+        print("將點餐結果匯出至 {}".format(file_name))
+
+        with open(file_name, 'w') as f:
+            for item, amount in orders.items():
+                f.write("{0} {1} 份\n".format(item, amount))
+        assistant.send_orders(orders)
 
 
     
