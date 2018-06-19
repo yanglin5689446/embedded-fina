@@ -11,26 +11,30 @@ class Assistant:
         self.food_stall = ''
         self.init_google_recognizer() 
     def init_google_recognizer(self):
-        with sr.Microphone(device_index=2) as source:
+        print(sr.Microphone.list_microphone_names())
+        with sr.Microphone(device_index=2, sample_rate=44100) as source:
             self.recognizer = sr.Recognizer()
             self.recognizer.adjust_for_ambient_noise(source)
     def listen_speech(self, timeout=3, phrase_time_limit=5):
-        with sr.Microphone(device_index=2) as source:
+        with sr.Microphone(device_index=2, sample_rate=44100) as source:
             self.audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
     def recognize_audio(self):
         try:
             return self.recognizer.recognize_google(self.audio, language=self.lang)
         except sr.UnknownValueError:
             return None
+        except sr.WaitTimeoutError:
+            return None
         except sr.RequestError as err:
             print("No response from Google Speech Recognition service: {0}".format(err))
+
     def listen_and_recognize(self):
         self.listen_speech()
         return self.recognize_audio()
     def say(self, message):
         print(message)
         speech = Speech(message, self.lang)
-        speech.play(("speed", "1"))
+        speech.play(("speed", "1.1"))
     def search_food_stall(self, query):
         best_distance = 1e9
         best_match = None
@@ -51,15 +55,21 @@ class Assistant:
                 best_distance = distance
         return (best_match, best_distance)
     def confirm(self):
-        positive_replies = ('是', '是的', '對', '對的', '正確', '沒錯', 'OK')
+        positive_replies = ('是', '是的', '對', '對的', '正確', '沒錯', 'OK', '好')
+        negative_replies = ('否', '不是', '錯', '不對', '錯誤', 'NO', '不要')
+
         user_reply = self.listen_and_recognize()
-        return self._semantic_analysis(user_reply, positive_replies) < 0.5
+        negative = self._semantic_analysis(user_reply, negative_replies)
+        positive = self._semantic_analysis(user_reply, positive_replies)
+
+        return positive < negative
+
     def check_order_finish(self, query):
-        return query == '就這樣'
+        replies = ('就這樣', '好了', '結束', '點完了')
+        return self._semantic_analysis(query, replies) < 0.5
 
     def send_orders(self, orders):
         message = self._assemble_message(orders)
-        print(message)
         line_send_to(message=message)
         
     def _semantic_analysis(self, query, phrases):
@@ -67,7 +77,8 @@ class Assistant:
         if not query:
             return 1e9
         for phrase in phrases:
-            best_distance = min(best_distance, editdistance.eval(query, phrase) / max(len(query), len(phrase)))
+            distance = editdistance.eval(query, phrase) / max(len(query), len(phrase))
+            best_distance = min(best_distance, distance)
         return best_distance
 
     def _assemble_message(self, orders):
