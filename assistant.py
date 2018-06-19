@@ -57,7 +57,6 @@ class Assistant:
     def check_cancel(self, message):
         possible_replies = ['取消']
         result = self._semantic_analysis(message, possible_replies)
-        print(result)
         return result <= 0.5
 
     def confirm(self):
